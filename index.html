@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrapling 中文教程 — 自适应网页抓取框架</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Space Grotesk', 'Noto Sans SC', 'sans-serif'],
+                        body: ['Noto Sans SC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef8ff',
+                            100: '#d8eeff',
+                            200: '#b9e2ff',
+                            300: '#89d1ff',
+                            400: '#51b6ff',
+                            500: '#2994ff',
+                            600: '#1276f5',
+                            700: '#0b5fe1',
+                            800: '#104db6',
+                            900: '#13438f',
+                            950: '#112a57',
+                        },
+                        surface: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            800: '#1e293b',
+                            850: '#172033',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans SC', sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif; }
+
+        /* Code block styling */
+        pre code.hljs {
+            background: transparent !important;
+            padding: 0 !important;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+        }
+        .code-block {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .code-block pre {
+            margin: 0;
+            padding: 1.25rem 1.5rem;
+            overflow-x: auto;
+        }
+        .code-label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 4px 12px;
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: 0 12px 0 8px;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 70px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            border-radius: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+        .code-block:hover .copy-btn { opacity: 1; }
+
+        /* Mesh gradient background */
+        .mesh-bg {
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(41, 148, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(11, 95, 225, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(81, 182, 255, 0.05) 0%, transparent 50%);
+        }
+        .dark .mesh-bg {
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(41, 148, 255, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(11, 95, 225, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(81, 182, 255, 0.06) 0%, transparent 50%);
+        }
+
+        /* Noise texture overlay */
+        .noise::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.015;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            z-index: 9999;
+        }
+        .dark .noise::after { opacity: 0.03; }
+
+        /* Sidebar active link */
+        .sidebar-link.active {
+            color: #2994ff;
+            border-left-color: #2994ff;
+            background: rgba(41, 148, 255, 0.06);
+        }
+        .dark .sidebar-link.active {
+            background: rgba(41, 148, 255, 0.1);
+        }
+
+        /* Smooth section transitions */
+        section { scroll-margin-top: 5rem; }
+
+        /* Feature card hover */
+        .feature-card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Table styling */
+        .bench-table th,
+        .bench-table td {
+            padding: 0.75rem 1rem;
+            text-align: center;
+        }
+        .bench-table tr:first-child td,
+        .bench-table tr:first-child th {
+            font-weight: 600;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+
+        /* Fade in animation */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up {
+            animation: fadeUp 0.6s ease forwards;
+            opacity: 0;
+        }
+        .fade-up-d1 { animation-delay: 0.1s; }
+        .fade-up-d2 { animation-delay: 0.2s; }
+        .fade-up-d3 { animation-delay: 0.3s; }
+
+        /* Mobile sidebar */
+        .sidebar-overlay {
+            transition: opacity 0.3s;
+        }
+        .sidebar-panel {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-surface-50 dark:bg-surface-950 text-slate-800 dark:text-slate-200 noise">
+
+    <!-- Top navigation bar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-surface-950/80 border-b border-slate-200/60 dark:border-slate-800/60">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button id="menuBtn" class="lg:hidden p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="打开菜单">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <a href="#" class="font-display font-bold text-lg tracking-tight text-brand-700 dark:text-brand-400">
+                    <span class="text-xl">⚡</span> Scrapling 教程
+                </a>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="https://github.com/D4Vinci/Scrapling" target="_blank" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" aria-label="GitHub">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                </a>
+                <a href="https://scrapling.readthedocs.io" target="_blank" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" aria-label="文档">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </a>
+                <button id="themeToggle" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" aria-label="切换主题">
+                    <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile sidebar overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 z-40 bg-black/40 hidden opacity-0 lg:hidden"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-panel fixed top-14 left-0 z-40 w-72 h-[calc(100vh-3.5rem)] overflow-y-auto bg-white/90 dark:bg-surface-900/95 backdrop-blur-xl border-r border-slate-200/60 dark:border-slate-800/60 -translate-x-full lg:translate-x-0 transition-transform">
+        <nav class="p-4 space-y-1 text-sm">
+            <p class="px-3 pt-3 pb-2 text-[0.68rem] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">入门</p>
+            <a href="#overview" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">概述</a>
+            <a href="#install" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">安装指南</a>
+            <a href="#quickstart" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">快速入门</a>
+
+            <p class="px-3 pt-5 pb-2 text-[0.68rem] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">抓取器</p>
+            <a href="#fetcher" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">HTTP 抓取器</a>
+            <a href="#stealthy" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">隐身抓取器</a>
+            <a href="#dynamic" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">动态抓取器</a>
+            <a href="#sessions" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">会话管理</a>
+
+            <p class="px-3 pt-5 pb-2 text-[0.68rem] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">爬虫框架</p>
+            <a href="#spider" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">基础爬虫</a>
+            <a href="#multi-session" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">多会话爬虫</a>
+            <a href="#checkpoint" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">暂停与恢复</a>
+
+            <p class="px-3 pt-5 pb-2 text-[0.68rem] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">解析</p>
+            <a href="#selectors" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">选择器与导航</a>
+            <a href="#adaptive" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">自适应抓取</a>
+
+            <p class="px-3 pt-5 pb-2 text-[0.68rem] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">工具</p>
+            <a href="#cli" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">命令行工具</a>
+            <a href="#benchmarks" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">性能基准</a>
+            <a href="#features" class="sidebar-link block px-3 py-2 rounded-lg border-l-2 border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-400 transition-colors">核心特性</a>
+        </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="lg:ml-72 pt-14">
+        <div class="max-w-4xl mx-auto px-4 sm:px-8 py-10 sm:py-16">
+
+            <!-- Hero / Overview -->
+            <section id="overview" class="mb-20">
+                <div class="mesh-bg rounded-2xl p-8 sm:p-12 border border-slate-200/50 dark:border-slate-800/50">
+                    <div class="fade-up">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100/80 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 text-xs font-medium mb-6 border border-brand-200/50 dark:border-brand-800/40">
+                            <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+                            Python 3.10+
+                        </div>
+                        <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight mb-6">
+                            Scrapling<br>
+                            <span class="text-brand-600 dark:text-brand-400">自适应网页抓取框架</span>
+                        </h1>
+                        <p class="text-lg sm:text-xl text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed mb-8">
+                            从单个请求到大规模爬取，一个库搞定一切。解析器能自动学习网站变化，抓取器可绕过反机器人系统，爬虫框架支持并发、暂停恢复与代理轮换。
+                        </p>
+                    </div>
+                    <div class="fade-up fade-up-d1 flex flex-wrap gap-3">
+                        <a href="#install" class="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-brand-500/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            安装 Scrapling
+                        </a>
+                        <a href="#quickstart" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-medium transition-colors border border-slate-200 dark:border-slate-700">
+                            快速入门 →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Quick preview code -->
+                <div class="mt-8 fade-up fade-up-d2">
+                    <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                        <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                        <pre><code class="language-python">from scrapling.fetchers import StealthyFetcher
+
+# 隐蔽抓取网站 — 绕过 Cloudflare 等反机器人系统
+page = StealthyFetcher.fetch('https://example.com', headless=True, network_idle=True)
+
+# 自适应抓取 — 即使网站结构变化也能定位元素
+products = page.css('.product', auto_save=True)
+products = page.css('.product', adaptive=True)</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Installation -->
+            <section id="install" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">安装指南</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">Scrapling 需要 Python 3.10 或更高版本</p>
+
+                <div class="space-y-6">
+                    <!-- Basic install -->
+                    <div class="p-6 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-display font-bold text-sm">1</span>
+                            <h3 class="font-display font-semibold text-slate-900 dark:text-white">基础安装</h3>
+                            <span class="ml-auto text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">仅解析器</span>
+                        </div>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">此安装仅包含解析器引擎及其依赖项，不包含任何抓取器或命令行依赖项。</p>
+                        <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                            <pre><code class="language-bash">pip install scrapling</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Fetchers install -->
+                    <div class="p-6 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-display font-bold text-sm">2</span>
+                            <h3 class="font-display font-semibold text-slate-900 dark:text-white">安装抓取器</h3>
+                            <span class="ml-auto text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">推荐</span>
+                        </div>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">安装所有抓取器依赖项，然后安装浏览器及其系统依赖项。</p>
+                        <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                            <pre><code class="language-bash">pip install "scrapling[fetchers]"
+
+# 安装浏览器依赖项
+scrapling install           # 正常安装
+scrapling install --force   # 强制重新安装</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Optional extras -->
+                    <div class="p-6 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-display font-bold text-sm">3</span>
+                            <h3 class="font-display font-semibold text-slate-900 dark:text-white">可选功能</h3>
+                        </div>
+                        <div class="grid sm:grid-cols-3 gap-3 mb-4">
+                            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 text-center">
+                                <div class="text-xs font-mono text-brand-600 dark:text-brand-400 mb-1">[ai]</div>
+                                <div class="text-xs text-slate-500">MCP 服务器</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 text-center">
+                                <div class="text-xs font-mono text-brand-600 dark:text-brand-400 mb-1">[shell]</div>
+                                <div class="text-xs text-slate-500">交互式 Shell</div>
+                            </div>
+                            <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 text-center">
+                                <div class="text-xs font-mono text-brand-600 dark:text-brand-400 mb-1">[all]</div>
+                                <div class="text-xs text-slate-500">全部安装</div>
+                            </div>
+                        </div>
+                        <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                            <pre><code class="language-bash">pip install "scrapling[ai]"      # MCP 服务器
+pip install "scrapling[shell]"   # Shell 功能
+pip install "scrapling[all]"     # 全部安装</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Docker -->
+                    <div class="p-6 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-display font-bold text-sm">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13.983 11.078h2.119a.186.186 0 00.186-.186V9.006a.186.186 0 00-.186-.186h-2.119a.186.186 0 00-.187.186v1.886c0 .103.084.186.187.186zm-2.954-5.43h2.118a.186.186 0 00.187-.185V3.577a.186.186 0 00-.187-.186h-2.118a.186.186 0 00-.187.186v1.886c0 .102.084.185.187.185zm0 2.716h2.118a.187.187 0 00.187-.186V6.292a.187.187 0 00-.187-.186h-2.118a.187.187 0 00-.187.186v1.886c0 .103.084.186.187.186zm-2.93 0h2.12a.186.186 0 00.186-.186V6.292a.186.186 0 00-.186-.186H8.1a.186.186 0 00-.185.186v1.886c0 .103.083.186.185.186zm-2.964 0h2.119a.186.186 0 00.185-.186V6.292a.186.186 0 00-.185-.186H5.136a.186.186 0 00-.186.186v1.886c0 .103.084.186.186.186zm5.893 2.715h2.118a.186.186 0 00.186-.186V9.006a.186.186 0 00-.186-.186h-2.118a.187.187 0 00-.187.186v1.886c0 .103.084.186.187.186zm-2.93 0h2.12a.185.185 0 00.185-.186V9.006a.185.185 0 00-.185-.186h-2.12a.185.185 0 00-.184.186v1.886c0 .103.083.186.185.186zm-2.964 0h2.119a.186.186 0 00.185-.186V9.006a.186.186 0 00-.185-.186H5.136a.186.186 0 00-.186.186v1.886c0 .103.084.186.186.186zm-2.92 0h2.12a.185.185 0 00.184-.186V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.184.186v1.886c0 .103.082.186.185.186zM23.763 9.89c-.065-.051-.672-.51-1.954-.51-.338.001-.676.03-1.01.087-.248-1.7-1.653-2.53-1.716-2.566l-.344-.199-.226.327c-.284.438-.49.922-.612 1.43-.23.97-.09 1.882.403 2.661-.595.332-1.55.413-1.744.42H.751a.751.751 0 00-.75.748 11.687 11.687 0 00.692 4.062c.545 1.428 1.355 2.48 2.41 3.124 1.18.723 3.1 1.137 5.275 1.137.983.003 1.963-.086 2.93-.266a12.228 12.228 0 003.823-1.389c.98-.567 1.86-1.288 2.61-2.136 1.252-1.418 1.998-2.997 2.553-4.4h.221c1.372 0 2.215-.549 2.68-1.009.309-.293.55-.65.707-1.046l.098-.288z"/></svg>
+                            </span>
+                            <h3 class="font-display font-semibold text-slate-900 dark:text-white">Docker</h3>
+                        </div>
+                        <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                            <pre><code class="language-bash">docker pull pyd4vinci/scrapling
+# 或从 GitHub 注册表
+docker pull ghcr.io/d4vinci/scrapling:latest</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Programmatic install -->
+                    <div class="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30">
+                        <p class="text-sm text-amber-800 dark:text-amber-300">
+                            <span class="font-semibold">💡 提示：</span>你也可以在代码中安装浏览器依赖项：
+                        </p>
+                        <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60 mt-3">
+                            <pre><code class="language-python">from scrapling.cli import install
+
+install([], standalone_mode=False)            # 正常安装
+install(["--force"], standalone_mode=False)    # 强制重新安装</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Start -->
+            <section id="quickstart" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">快速入门</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">几行代码即可开始抓取</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.fetchers import Fetcher, AsyncFetcher, StealthyFetcher, DynamicFetcher
+
+# 隐蔽抓取
+StealthyFetcher.adaptive = True
+p = StealthyFetcher.fetch('https://example.com', headless=True, network_idle=True)
+
+# 自适应数据提取
+products = p.css('.product', auto_save=True)    # 首次保存元素信息
+products = p.css('.product', adaptive=True)     # 之后自适应查找</code></pre>
+                </div>
+
+                <div class="mt-6 code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.spiders import Spider, Response
+
+class MySpider(Spider):
+    name = "demo"
+    start_urls = ["https://example.com/"]
+
+    async def parse(self, response: Response):
+        for item in response.css('.product'):
+            yield {"title": item.css('h2::text').get()}
+
+MySpider().start()</code></pre>
+                </div>
+            </section>
+
+            <!-- Fetcher -->
+            <section id="fetcher" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">HTTP 抓取器</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">使用 <code class="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Fetcher</code> 和 <code class="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">FetcherSession</code> 实现快速且隐蔽的 HTTP 请求，支持 TLS 指纹模拟和 HTTP/3</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.fetchers import Fetcher, FetcherSession
+
+# 使用持久化会话 — 模拟最新版 Chrome 的 TLS 指纹
+with FetcherSession(impersonate='chrome') as session:
+    page = session.get('https://quotes.toscrape.com/', stealthy_headers=True)
+    quotes = page.css('.quote .text::text').getall()
+
+# 或使用一次性请求
+page = Fetcher.get('https://quotes.toscrape.com/')
+quotes = page.css('.quote .text::text').getall()</code></pre>
+                </div>
+
+                <div class="mt-6 grid sm:grid-cols-3 gap-3">
+                    <div class="p-4 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="text-brand-600 dark:text-brand-400 mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <h4 class="font-medium text-sm text-slate-900 dark:text-white mb-1">极速请求</h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">基于高性能 HTTP 库，支持 HTTP/3 协议</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="text-brand-600 dark:text-brand-400 mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        </div>
+                        <h4 class="font-medium text-sm text-slate-900 dark:text-white mb-1">TLS 指纹</h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">模拟真实浏览器的 TLS 指纹和请求头</p>
+                    </div>
+                    <div class="p-4 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="text-brand-600 dark:text-brand-400 mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                        </div>
+                        <h4 class="font-medium text-sm text-slate-900 dark:text-white mb-1">会话持久化</h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">跨请求管理 Cookie 和连接状态</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stealthy Fetcher -->
+            <section id="stealthy" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">隐身抓取器</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">使用 <code class="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">StealthyFetcher</code> 绕过 Cloudflare Turnstile 等反机器人系统</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.fetchers import StealthyFetcher, StealthySession
+
+# 持久化会话模式 — 保持浏览器打开直到完成
+with StealthySession(headless=True, solve_cloudflare=True) as session:
+    page = session.fetch('https://nopecha.com/demo/cloudflare', google_search=False)
+    data = page.css('#padded_content a').getall()
+
+# 一次性请求模式 — 为此请求打开浏览器，完成后自动关闭
+page = StealthyFetcher.fetch('https://nopecha.com/demo/cloudflare')
+data = page.css('#padded_content a').getall()</code></pre>
+                </div>
+
+                <div class="mt-6 p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/30">
+                    <p class="text-sm text-emerald-800 dark:text-emerald-300">
+                        <span class="font-semibold">🛡️ 反机器人绕过：</span>StealthyFetcher 提供高级隐身功能和指纹欺骗，可以轻松自动绕过各种类型的 Cloudflare Turnstile/拦截页面。
+                    </p>
+                </div>
+            </section>
+
+            <!-- Dynamic Fetcher -->
+            <section id="dynamic" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">动态抓取器</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">使用 <code class="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">DynamicFetcher</code> 实现完整的浏览器自动化，支持 Playwright</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.fetchers import DynamicFetcher, DynamicSession
+
+# 持久化会话模式
+with DynamicSession(headless=True, disable_resources=False, network_idle=True) as session:
+    page = session.fetch('https://quotes.toscrape.com/', load_dom=False)
+    data = page.xpath('//span[@class="text"]/text()').getall()  # 支持 XPath
+
+# 一次性请求模式
+page = DynamicFetcher.fetch('https://quotes.toscrape.com/')
+data = page.css('.quote .text::text').getall()</code></pre>
+                </div>
+            </section>
+
+            <!-- Sessions -->
+            <section id="sessions" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">异步会话管理</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">所有抓取器都完整支持异步，提供专用的异步会话类</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">import asyncio
+from scrapling.fetchers import FetcherSession, AsyncStealthySession, AsyncDynamicSession
+
+# FetcherSession 支持上下文感知，可在同步/异步模式下工作
+async with FetcherSession(http3=True) as session:
+    page1 = session.get('https://quotes.toscrape.com/')
+    page2 = session.get('https://quotes.toscrape.com/', impersonate='firefox135')
+
+# 异步隐身会话 — 并发处理多个页面
+async with AsyncStealthySession(max_pages=2) as session:
+    tasks = []
+    urls = ['https://example.com/page1', 'https://example.com/page2']
+
+    for url in urls:
+        task = session.fetch(url)
+        tasks.append(task)
+
+    print(session.get_pool_stats())    # 浏览器标签页池状态
+    results = await asyncio.gather(*tasks)
+    print(session.get_pool_stats())</code></pre>
+                </div>
+            </section>
+
+            <!-- Spider Basics -->
+            <section id="spider" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">基础爬虫</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">类似 Scrapy 的 API，支持并发请求和数据导出</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.spiders import Spider, Request, Response
+
+class QuotesSpider(Spider):
+    name = "quotes"
+    start_urls = ["https://quotes.toscrape.com/"]
+    concurrent_requests = 10
+
+    async def parse(self, response: Response):
+        for quote in response.css('.quote'):
+            yield {
+                "text": quote.css('.text::text').get(),
+                "author": quote.css('.author::text').get(),
+            }
+
+        # 自动跟踪分页链接
+        next_page = response.css('.next a')
+        if next_page:
+            yield response.follow(next_page[0].attrib['href'])
+
+result = QuotesSpider().start()
+print(f"抓取了 {len(result.items)} 条引言")
+result.items.to_json("quotes.json")    # 导出为 JSON
+result.items.to_jsonl("quotes.jsonl")  # 导出为 JSONL</code></pre>
+                </div>
+            </section>
+
+            <!-- Multi-session Spider -->
+            <section id="multi-session" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">多会话爬虫</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">在单个爬虫中混合使用 HTTP 请求和隐身浏览器会话</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.spiders import Spider, Request, Response
+from scrapling.fetchers import FetcherSession, AsyncStealthySession
+
+class MultiSessionSpider(Spider):
+    name = "multi"
+    start_urls = ["https://example.com/"]
+
+    def configure_sessions(self, manager):
+        # 定义多种会话类型
+        manager.add("fast", FetcherSession(impersonate="chrome"))
+        manager.add("stealth", AsyncStealthySession(headless=True), lazy=True)
+
+    async def parse(self, response: Response):
+        for link in response.css('a::attr(href)').getall():
+            if "protected" in link:
+                # 受保护的页面通过隐身会话路由
+                yield Request(link, sid="stealth")
+            else:
+                # 普通页面使用快速 HTTP 会话
+                yield Request(link, sid="fast", callback=self.parse)</code></pre>
+                </div>
+            </section>
+
+            <!-- Checkpoint -->
+            <section id="checkpoint" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">暂停与恢复</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">基于检查点的爬取持久化，按 Ctrl+C 优雅关闭，重新启动后从停止处继续</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python"># 指定 crawldir 启用暂停/恢复功能
+QuotesSpider(crawldir="./crawl_data").start()
+
+# 按 Ctrl+C 优雅暂停 — 进度会自动保存
+# 再次运行时传入相同的 crawldir，将从停止处继续</code></pre>
+                </div>
+
+                <div class="mt-6 flex items-start gap-3 p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/30">
+                    <svg class="w-5 h-5 text-blue-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p class="text-sm text-blue-800 dark:text-blue-300">
+                        爬虫还支持 <strong>流式模式</strong>：通过 <code class="font-mono text-xs bg-blue-100 dark:bg-blue-900/40 px-1 py-0.5 rounded">async for item in spider.stream()</code> 实时接收抓取的数据项，带有实时统计，非常适合 UI、管道和长时间运行的爬取任务。
+                    </p>
+                </div>
+            </section>
+
+            <!-- Selectors & Navigation -->
+            <section id="selectors" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">选择器与导航</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">支持 CSS、XPath、BeautifulSoup 风格和文本搜索等多种选择方式</p>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60 mb-6">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.fetchers import Fetcher
+
+page = Fetcher.get('https://quotes.toscrape.com/')
+
+# 多种选择方法
+quotes = page.css('.quote')                           # CSS 选择器
+quotes = page.xpath('//div[@class="quote"]')          # XPath
+quotes = page.find_all('div', {'class': 'quote'})    # BeautifulSoup 风格
+quotes = page.find_all('div', class_='quote')         # 等同写法
+quotes = page.find_all(class_='quote')                # 简写形式
+quotes = page.find_by_text('quote', tag='div')        # 按文本查找
+
+# DOM 导航
+quote_text = page.css('.quote')[0].css('.text::text').get()
+quote_text = page.css('.quote').css('.text::text').getall()  # 链式选择器
+first_quote = page.css('.quote')[0]
+author = first_quote.next_sibling.css('.author::text')       # 兄弟元素
+parent_container = first_quote.parent                         # 父元素
+
+# 元素相似性与空间关系
+similar_elements = first_quote.find_similar()    # 查找相似元素
+below_elements = first_quote.below_elements()    # 下方元素</code></pre>
+                </div>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-amber-500/15 text-amber-400">纯解析器</span>
+                    <pre><code class="language-python">from scrapling.parser import Selector
+
+# 直接解析 HTML 字符串，无需抓取网站
+page = Selector("&lt;html&gt;...&lt;/html&gt;")
+# 使用完全相同的 API！</code></pre>
+                </div>
+            </section>
+
+            <!-- Adaptive -->
+            <section id="adaptive" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">自适应抓取</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">智能相似度算法在网站变化后自动重新定位元素</p>
+
+                <div class="grid sm:grid-cols-2 gap-4 mb-6">
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">🔄</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">智能元素追踪</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">使用智能相似度算法，即使网站重新设计也能找到目标元素。</p>
+                    </div>
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">🔍</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">查找相似元素</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">自动定位与已找到元素具有相似结构和属性的其他元素。</p>
+                    </div>
+                </div>
+
+                <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                    <span class="code-label bg-emerald-500/15 text-emerald-400">python</span>
+                    <pre><code class="language-python">from scrapling.fetchers import StealthyFetcher
+
+StealthyFetcher.adaptive = True
+page = StealthyFetcher.fetch('https://example.com', headless=True, network_idle=True)
+
+# 第一步：保存元素信息
+products = page.css('.product', auto_save=True)
+
+# 第二步：之后网站变化时，自适应查找
+products = page.css('.product', adaptive=True)</code></pre>
+                </div>
+            </section>
+
+            <!-- CLI -->
+            <section id="cli" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">命令行工具</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">无需编写代码即可抓取和提取网页内容</p>
+
+                <div class="space-y-4">
+                    <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                        <span class="code-label bg-cyan-500/15 text-cyan-400">shell</span>
+                        <pre><code class="language-bash"># 启动交互式网页抓取 Shell
+scrapling shell</code></pre>
+                    </div>
+
+                    <div class="code-block bg-slate-900 dark:bg-slate-950 border border-slate-800/60">
+                        <span class="code-label bg-cyan-500/15 text-cyan-400">提取</span>
+                        <pre><code class="language-bash"># 提取为 Markdown
+scrapling extract get 'https://example.com' content.md
+
+# 提取指定 CSS 选择器的文本内容
+scrapling extract get 'https://example.com' content.txt \
+  --css-selector '#fromSkipToProducts' --impersonate 'chrome'
+
+# 使用 DynamicFetcher 提取
+scrapling extract fetch 'https://example.com' content.md \
+  --css-selector '#fromSkipToProducts' --no-headless
+
+# 使用 StealthyFetcher 绕过 Cloudflare
+scrapling extract stealthy-fetch 'https://nopecha.com/demo/cloudflare' \
+  captchas.html --css-selector '#padded_content a' --solve-cloudflare</code></pre>
+                    </div>
+                </div>
+
+                <div class="mt-6 grid sm:grid-cols-3 gap-3 text-center">
+                    <div class="p-3 rounded-lg bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">.txt</div>
+                        <div class="text-sm text-slate-700 dark:text-slate-300">纯文本内容</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">.md</div>
+                        <div class="text-sm text-slate-700 dark:text-slate-300">Markdown 表示</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60">
+                        <div class="text-xs font-mono text-slate-500 dark:text-slate-400 mb-1">.html</div>
+                        <div class="text-sm text-slate-700 dark:text-slate-300">原始 HTML</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Benchmarks -->
+            <section id="benchmarks" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">性能基准</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">所有基准测试均为 100 次以上运行的平均值</p>
+
+                <div class="space-y-8">
+                    <!-- Text extraction benchmark -->
+                    <div class="rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200/60 dark:border-slate-800/60">
+                            <h3 class="font-display font-semibold text-slate-900 dark:text-white">文本提取速度（5000 个嵌套元素）</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="bench-table w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400">
+                                        <th class="text-left px-6 py-3 font-medium">#</th>
+                                        <th class="text-left px-6 py-3 font-medium">库</th>
+                                        <th class="px-6 py-3 font-medium">时间 (ms)</th>
+                                        <th class="px-6 py-3 font-medium">相对速度</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/40">
+                                    <tr class="bg-brand-50/40 dark:bg-brand-950/20">
+                                        <td class="px-6 py-3 text-left font-mono text-xs text-slate-400">1</td>
+                                        <td class="px-6 py-3 text-left font-semibold text-brand-700 dark:text-brand-400">Scrapling</td>
+                                        <td class="px-6 py-3 font-mono">2.02</td>
+                                        <td class="px-6 py-3"><span class="px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 text-xs font-semibold">1.0x</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-3 text-left font-mono text-xs text-slate-400">2</td>
+                                        <td class="px-6 py-3 text-left text-slate-700 dark:text-slate-300">Parsel/Scrapy</td>
+                                        <td class="px-6 py-3 font-mono">2.04</td>
+                                        <td class="px-6 py-3 text-slate-500">1.01x</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-3 text-left font-mono text-xs text-slate-400">3</td>
+                                        <td class="px-6 py-3 text-left text-slate-700 dark:text-slate-300">Raw Lxml</td>
+                                        <td class="px-6 py-3 font-mono">2.54</td>
+                                        <td class="px-6 py-3 text-slate-500">1.26x</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-3 text-left font-mono text-xs text-slate-400">4</td>
+                                        <td class="px-6 py-3 text-left text-slate-700 dark:text-slate-300">PyQuery</td>
+                                        <td class="px-6 py-3 font-mono">24.17</td>
+                                        <td class="px-6 py-3 text-slate-500">~12x</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-3 text-left font-mono text-xs text-slate-400">5</td>
+                                        <td class="px-6 py-3 text-left text-slate-700 dark:text-slate-300">Selectolax</td>
+                                        <td class="px-6 py-3 font-mono">82.63</td>
+                                        <td class="px-6 py-3 text-slate-500">~41x</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-3 text-left font-mono text-xs text-slate-400">6</td>
+                                        <td class="px-6 py-3 text-left text-slate-700 dark:text-slate-300">MechanicalSoup</td>
+                                        <td class="px-6 py-3 font-mono">1549.71</td>
+                                        <td class="px-6 py-3 text-red-500 dark:text-red-400">~767x</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-3 text-left font-mono text-xs text-slate-400">7</td>
+                                        <td class="px-6 py-3 text-left text-slate-700 dark:text-slate-300">BS4 + Lxml</td>
+                                        <td class="px-6 py-3 font-mono">1584.31</td>
+                                        <td class="px-6 py-3 text-red-500 dark:text-red-400">~784x</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-3 text-left font-mono text-xs text-slate-400">8</td>
+                                        <td class="px-6 py-3 text-left text-slate-700 dark:text-slate-300">BS4 + html5lib</td>
+                                        <td class="px-6 py-3 font-mono">3391.91</td>
+                                        <td class="px-6 py-3 text-red-500 dark:text-red-400">~1679x</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Similarity benchmark -->
+                    <div class="rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200/60 dark:border-slate-800/60">
+                            <h3 class="font-display font-semibold text-slate-900 dark:text-white">元素相似性与文本搜索</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="bench-table w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400">
+                                        <th class="text-left px-6 py-3 font-medium">库</th>
+                                        <th class="px-6 py-3 font-medium">时间 (ms)</th>
+                                        <th class="px-6 py-3 font-medium">相对速度</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/40">
+                                    <tr class="bg-brand-50/40 dark:bg-brand-950/20">
+                                        <td class="px-6 py-3 text-left font-semibold text-brand-700 dark:text-brand-400">Scrapling</td>
+                                        <td class="px-6 py-3 font-mono">2.39</td>
+                                        <td class="px-6 py-3"><span class="px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 text-xs font-semibold">1.0x</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-3 text-left text-slate-700 dark:text-slate-300">AutoScraper</td>
+                                        <td class="px-6 py-3 font-mono">12.45</td>
+                                        <td class="px-6 py-3 text-slate-500">5.21x</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Features -->
+            <section id="features" class="mb-20">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">核心特性</h2>
+                <p class="text-slate-500 dark:text-slate-400 mb-8">Scrapling 提供全面的网页抓取解决方案</p>
+
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">🕷️</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">类 Scrapy 爬虫 API</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">使用 start_urls、异步 parse 回调和 Request/Response 对象定义爬虫。</p>
+                    </div>
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">⚡</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">并发爬取</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">可配置的并发限制、按域名限速和下载延迟。</p>
+                    </div>
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">🔄</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">多会话支持</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">统一的 HTTP 请求和隐身无头浏览器接口，通过 ID 路由到不同会话。</p>
+                    </div>
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">📡</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">流式模式</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">实时流式接收抓取的数据项，带有实时统计，适合 UI 和管道。</p>
+                    </div>
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">🛡️</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">被阻止请求检测</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">自动检测和重试被阻止的请求，支持自定义逻辑。</p>
+                    </div>
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">🔌</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">代理轮换</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">内置 ProxyRotator，支持循环或自定义轮换策略。</p>
+                    </div>
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">🤖</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">MCP 服务器</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">内置 MCP 服务器，用于 AI 辅助的网页抓取和数据提取，减少 token 使用量。</p>
+                    </div>
+                    <div class="p-5 rounded-xl bg-white dark:bg-surface-900 border border-slate-200/60 dark:border-slate-800/60 feature-card">
+                        <div class="text-2xl mb-3">📘</div>
+                        <h4 class="font-display font-semibold text-slate-900 dark:text-white mb-2">完整类型覆盖</h4>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">完整的类型提示，出色的 IDE 支持，代码库使用 PyRight 和 MyPy 扫描。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="border-t border-slate-200/60 dark:border-slate-800/60 pt-8 pb-12">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400 dark:text-slate-500">
+                    <div>
+                        由 <a href="https://github.com/D4Vinci" class="text-slate-600 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400">Karim Shoair</a> 用 ❤️ 设计打造
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <a href="https://github.com/D4Vinci/Scrapling" class="hover:text-slate-600 dark:hover:text-slate-300">GitHub</a>
+                        <a href="https://scrapling.readthedocs.io" class="hover:text-slate-600 dark:hover:text-slate-300">文档</a>
+                        <a href="https://pypi.org/project/scrapling/" class="hover:text-slate-600 dark:hover:text-slate-300">PyPI</a>
+                        <a href="https://discord.gg/EMgGbDceNQ" class="hover:text-slate-600 dark:hover:text-slate-300">Discord</a>
+                    </div>
+                    <div>BSD-3-Clause 许可证</div>
+                </div>
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        // Highlight.js
+        hljs.highlightAll();
+
+        // Theme toggle
+        const toggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        if (localStorage.theme === 'dark' || (!localStorage.theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        }
+        toggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.theme = html.classList.contains('dark') ? 'dark' : 'light';
+        });
+
+        // Mobile sidebar
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        function openSidebar() {
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+            requestAnimationFrame(() => overlay.classList.remove('opacity-0'));
+        }
+        function closeSidebar() {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+
+        menuBtn.addEventListener('click', openSidebar);
+        overlay.addEventListener('click', closeSidebar);
+
+        // Close sidebar on link click (mobile)
+        sidebar.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 1024) closeSidebar();
+            });
+        });
+
+        // Active sidebar link tracking
+        const sections = document.querySelectorAll('section[id]');
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    sidebarLinks.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+                    });
+                }
+            });
+        }, { rootMargin: '-20% 0px -75% 0px' });
+
+        sections.forEach(section => observer.observe(section));
+
+        // Fade-in on scroll
+        const fadeEls = document.querySelectorAll('.fade-up');
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                    fadeObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        fadeEls.forEach(el => {
+            el.style.animationPlayState = 'paused';
+            fadeObserver.observe(el);
+        });
+    </script>
+</body>
+</html>
